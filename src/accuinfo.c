@@ -1,7 +1,6 @@
 /****************************************************************************/
 /**
-* Pebble watch face that displays time similar to the way the Android 4.2
-* clock does it.
+* Pebble watch face that displays "all the time".
 *
 * @file   accuinfo.c
 *
@@ -15,13 +14,29 @@
 #include "pebble_os.h"
 #include "pebble_app.h"
 #include "pebble_fonts.h"
+#include "style.h"
 
 
-#define MY_UUID { 0x85, 0x98, 0xEA, 0x3A, 0x13, 0x8C, 0x4F, 0x9D, 0x89, 0x17, 0xF3, 0x84, 0xD6, 0x95, 0xD7, 0x6B }
+#if (INVERTED == 1)
+#define MY_UUID {0x50, 0x6B, 0xB2, 0xE6, 0x43, 0x82, 0x47, 0x0D,        \
+                 0xBB, 0x4B, 0x8A, 0xEA, 0x22, 0xBB, 0xE2, 0x03 }
+#define APP_NAME "AccuWhite"
+#define FG_COLOR GColorBlack
+#define BG_COLOR GColorWhite
+
+#else
+
+#define MY_UUID { 0x85, 0x98, 0xEA, 0x3A, 0x13, 0x8C, 0x4F, 0x9D,       \
+                  0x89, 0x17, 0xF3, 0x84, 0xD6, 0x95, 0xD7, 0x6B }
+#define APP_NAME "AccuInfo"
+#define FG_COLOR GColorWhite
+#define BG_COLOR GColorBlack
+#endif
 
 PBL_APP_INFO(MY_UUID,
-             "AccuInfo", "bobh@haucks.org",
-             1, 0, /* App version */
+             APP_NAME,
+             "bobh@haucks.org",
+             1, 1, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -33,6 +48,7 @@ TextLayer time_layer;
 TextLayer secs_layer;
 TextLayer ampm_layer;
 TextLayer year_layer;
+Layer line_layer;
 
 
 char *upcase(char *str)
@@ -52,9 +68,11 @@ void line_layer_update_callback(Layer *l, GContext *ctx)
 {
     (void)l;
 
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_draw_line(ctx, GPoint(8, 97), GPoint(131, 97));
-    graphics_draw_line(ctx, GPoint(8, 98), GPoint(131, 98));
+    graphics_context_set_stroke_color(ctx, FG_COLOR);
+    graphics_draw_line(ctx, GPoint(0, 35), GPoint(144, 35));
+    graphics_draw_line(ctx, GPoint(0, 36), GPoint(144, 36));
+    graphics_draw_line(ctx, GPoint(0, 108), GPoint(144, 108));
+    graphics_draw_line(ctx, GPoint(0, 109), GPoint(144, 109));
 }
 
 
@@ -118,7 +136,7 @@ void handle_init(AppContextRef ctx)
 
     window_init(&window, "AccuInfo");
     window_stack_push(&window, true /* Animated */);
-    window_set_background_color(&window, GColorBlack);
+    window_set_background_color(&window, BG_COLOR);
 
     resource_init_current_app(&APP_RESOURCES);
 
@@ -128,7 +146,7 @@ void handle_init(AppContextRef ctx)
     font_time = fonts_load_custom_font(res_t);
 
     text_layer_init(&day_layer, window.layer.frame);
-    text_layer_set_text_color(&day_layer, GColorWhite);
+    text_layer_set_text_color(&day_layer, FG_COLOR);
     text_layer_set_background_color(&day_layer, GColorClear);
     text_layer_set_text_alignment(&day_layer, GTextAlignmentCenter);
     text_layer_set_font(&day_layer, font_date);
@@ -136,28 +154,28 @@ void handle_init(AppContextRef ctx)
     layer_add_child(&window.layer, &day_layer.layer);
 
     text_layer_init(&time_layer, window.layer.frame);
-    text_layer_set_text_color(&time_layer, GColorWhite);
+    text_layer_set_text_color(&time_layer, FG_COLOR);
     text_layer_set_background_color(&time_layer, GColorClear);
     layer_set_frame(&time_layer.layer, GRect(1, 48, 144-1, 168-48));
     text_layer_set_font(&time_layer, font_time);
     layer_add_child(&window.layer, &time_layer.layer);
 
     text_layer_init(&secs_layer, window.layer.frame);
-    text_layer_set_text_color(&secs_layer, GColorWhite);
+    text_layer_set_text_color(&secs_layer, FG_COLOR);
     text_layer_set_background_color(&secs_layer, GColorClear);
-    layer_set_frame(&secs_layer.layer, GRect(112, 48, 144-112, 168-48));
+    layer_set_frame(&secs_layer.layer, GRect(112, 46, 144-112, 168-46));
     text_layer_set_font(&secs_layer, font_date);
     layer_add_child(&window.layer, &secs_layer.layer);
 
     text_layer_init(&ampm_layer, window.layer.frame);
-    text_layer_set_text_color(&ampm_layer, GColorWhite);
+    text_layer_set_text_color(&ampm_layer, FG_COLOR);
     text_layer_set_background_color(&ampm_layer, GColorClear);
-    layer_set_frame(&ampm_layer.layer, GRect(112, 76, 144-112, 168-76));
+    layer_set_frame(&ampm_layer.layer, GRect(112, 74, 144-112, 168-74));
     text_layer_set_font(&ampm_layer, font_date);
     layer_add_child(&window.layer, &ampm_layer.layer);
 
     text_layer_init(&date_layer, window.layer.frame);
-    text_layer_set_text_color(&date_layer, GColorWhite);
+    text_layer_set_text_color(&date_layer, FG_COLOR);
     text_layer_set_background_color(&date_layer, GColorClear);
     text_layer_set_font(&date_layer, font_date);
     text_layer_set_text_alignment(&date_layer, GTextAlignmentCenter);
@@ -165,12 +183,16 @@ void handle_init(AppContextRef ctx)
     layer_add_child(&window.layer, &date_layer.layer);
 
     text_layer_init(&year_layer, window.layer.frame);
-    text_layer_set_text_color(&year_layer, GColorWhite);
+    text_layer_set_text_color(&year_layer, FG_COLOR);
     text_layer_set_background_color(&year_layer, GColorClear);
     text_layer_set_font(&year_layer, font_date);
     text_layer_set_text_alignment(&year_layer, GTextAlignmentCenter);
     layer_set_frame(&year_layer.layer, GRect(0, 142, 144, 168-142));
     layer_add_child(&window.layer, &year_layer.layer);
+
+    layer_init(&line_layer, window.layer.frame);
+    line_layer.update_proc = &line_layer_update_callback;
+    layer_add_child(&window.layer, &line_layer);
 
     get_time(&tm);
     t.tick_time = &tm;
