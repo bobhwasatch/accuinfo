@@ -36,7 +36,7 @@
 PBL_APP_INFO(MY_UUID,
              APP_NAME,
              "bobh@haucks.org",
-             1, 1, /* App version */
+             1, 2, /* App version */
              RESOURCE_ID_IMAGE_MENU_ICON,
              APP_INFO_WATCH_FACE);
 
@@ -49,6 +49,8 @@ TextLayer secs_layer;
 TextLayer ampm_layer;
 TextLayer year_layer;
 Layer line_layer;
+GFont font_date;
+GFont font_time;
 
 
 char *upcase(char *str)
@@ -131,8 +133,6 @@ void handle_init(AppContextRef ctx)
     PebbleTickEvent t;
     ResHandle res_d;
     ResHandle res_t;
-    GFont font_date;
-    GFont font_time;
 
     window_init(&window, "AccuInfo");
     window_stack_push(&window, true /* Animated */);
@@ -140,54 +140,48 @@ void handle_init(AppContextRef ctx)
 
     resource_init_current_app(&APP_RESOURCES);
 
-    res_d = resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_21);
+    res_d = resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_20);
     res_t = resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_SUBSET_41);
     font_date = fonts_load_custom_font(res_d);
     font_time = fonts_load_custom_font(res_t);
 
-    text_layer_init(&day_layer, window.layer.frame);
+    text_layer_init(&day_layer, GRect(0, 2, 144, 33));
+    text_layer_set_font(&day_layer, font_date);
     text_layer_set_text_color(&day_layer, FG_COLOR);
     text_layer_set_background_color(&day_layer, GColorClear);
     text_layer_set_text_alignment(&day_layer, GTextAlignmentCenter);
-    text_layer_set_font(&day_layer, font_date);
-    layer_set_frame(&day_layer.layer, GRect(1, 2, 144-1, 168-2));
     layer_add_child(&window.layer, &day_layer.layer);
 
-    text_layer_init(&time_layer, window.layer.frame);
+    text_layer_init(&time_layer, GRect(2, 48, 114, 60));
     text_layer_set_text_color(&time_layer, FG_COLOR);
     text_layer_set_background_color(&time_layer, GColorClear);
-    layer_set_frame(&time_layer.layer, GRect(1, 48, 144-1, 168-48));
     text_layer_set_font(&time_layer, font_time);
     layer_add_child(&window.layer, &time_layer.layer);
 
-    text_layer_init(&secs_layer, window.layer.frame);
+    text_layer_init(&secs_layer, GRect(116, 46, 144-116, 28));
+    text_layer_set_font(&secs_layer, font_date);
     text_layer_set_text_color(&secs_layer, FG_COLOR);
     text_layer_set_background_color(&secs_layer, GColorClear);
-    layer_set_frame(&secs_layer.layer, GRect(112, 46, 144-112, 168-46));
-    text_layer_set_font(&secs_layer, font_date);
     layer_add_child(&window.layer, &secs_layer.layer);
 
-    text_layer_init(&ampm_layer, window.layer.frame);
+    text_layer_init(&ampm_layer, GRect(116, 74, 144-116, 28));
+    text_layer_set_font(&ampm_layer, font_date);
     text_layer_set_text_color(&ampm_layer, FG_COLOR);
     text_layer_set_background_color(&ampm_layer, GColorClear);
-    layer_set_frame(&ampm_layer.layer, GRect(112, 74, 144-112, 168-74));
-    text_layer_set_font(&ampm_layer, font_date);
     layer_add_child(&window.layer, &ampm_layer.layer);
 
-    text_layer_init(&date_layer, window.layer.frame);
+    text_layer_init(&date_layer, GRect(1, 118, 144-1, 168-118));
+    text_layer_set_font(&date_layer, font_date);
     text_layer_set_text_color(&date_layer, FG_COLOR);
     text_layer_set_background_color(&date_layer, GColorClear);
-    text_layer_set_font(&date_layer, font_date);
     text_layer_set_text_alignment(&date_layer, GTextAlignmentCenter);
-    layer_set_frame(&date_layer.layer, GRect(1, 118, 144-1, 168-118));
     layer_add_child(&window.layer, &date_layer.layer);
 
-    text_layer_init(&year_layer, window.layer.frame);
+    text_layer_init(&year_layer, GRect(0, 142, 144, 168-142));
     text_layer_set_text_color(&year_layer, FG_COLOR);
     text_layer_set_background_color(&year_layer, GColorClear);
     text_layer_set_font(&year_layer, font_date);
     text_layer_set_text_alignment(&year_layer, GTextAlignmentCenter);
-    layer_set_frame(&year_layer.layer, GRect(0, 142, 144, 168-142));
     layer_add_child(&window.layer, &year_layer.layer);
 
     layer_init(&line_layer, window.layer.frame);
@@ -202,11 +196,19 @@ void handle_init(AppContextRef ctx)
 }
 
 
+void handle_deinit(AppContextRef ctx)
+{
+    fonts_unload_custom_font(font_date);
+    fonts_unload_custom_font(font_time);
+}
+
+
 void pbl_main(void *params)
 {
     PebbleAppHandlers handlers =
     {
         .init_handler = &handle_init,
+        .deinit_handler = &handle_deinit,
         .tick_info =
         {
             .tick_handler = &handle_second_tick,
