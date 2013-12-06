@@ -1,14 +1,10 @@
 AccuInfo
 ========
 
-AccuInfo and AccuWhite watch faces for the Pebble smart watch.
+This code used to generate two faces, AccuInfo and AccuWhite, with different
+UUID's. With SDK 2.0 we can now have configuration pages on the phone so I have
+combined them.
 
-To build, the file "style.h" must be created in the top directory. This file
-selects which style and must contain either "#define INVERTED 1" or
-"#define INVERTED 0", without the quotes.
+There is no more AccuWhite. Instead, use AccuInfo and set a white background
+from the configuration page in the Pebble app. The AccuWhite UUID is deprecated.
 
-The first case builds with black text on a white background, the second does
-the reverse. The script "build-all.sh" will build both styles, placing them
-in the top directory with names of "accuinfo.pbw" and "accuwhite.pbw". The
-two versions have different UUID's and so are considered different apps by
-the Pebble.
