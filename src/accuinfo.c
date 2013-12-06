@@ -11,46 +11,28 @@
 *
 *****************************************************************************/
 #include <ctype.h>
-#include "pebble_os.h"
-#include "pebble_app.h"
-#include "pebble_fonts.h"
-#include "style.h"
+#include "pebble.h"
 
 
-#if (INVERTED == 1)
-#define MY_UUID {0x50, 0x6B, 0xB2, 0xE6, 0x43, 0x82, 0x47, 0x0D,        \
-                 0xBB, 0x4B, 0x8A, 0xEA, 0x22, 0xBB, 0xE2, 0x03 }
-#define APP_NAME "AccuWhite"
-#define FG_COLOR GColorBlack
-#define BG_COLOR GColorWhite
-
-#else
-
-#define MY_UUID { 0x85, 0x98, 0xEA, 0x3A, 0x13, 0x8C, 0x4F, 0x9D,       \
-                  0x89, 0x17, 0xF3, 0x84, 0xD6, 0x95, 0xD7, 0x6B }
-#define APP_NAME "AccuInfo"
 #define FG_COLOR GColorWhite
 #define BG_COLOR GColorBlack
-#endif
 
-PBL_APP_INFO(MY_UUID,
-             APP_NAME,
-             "bobh@haucks.org",
-             1, 2, /* App version */
-             RESOURCE_ID_IMAGE_MENU_ICON,
-             APP_INFO_WATCH_FACE);
+/* Possible messages received from the config page
+*/
+#define CONFIG_KEY_BACKGROUND   (0)
 
 
-Window window;
-TextLayer day_layer;
-TextLayer date_layer;
-TextLayer time_layer;
-TextLayer secs_layer;
-TextLayer ampm_layer;
-TextLayer year_layer;
-Layer line_layer;
-GFont font_date;
-GFont font_time;
+Window *window;
+TextLayer *day_layer;
+TextLayer *date_layer;
+TextLayer *time_layer;
+TextLayer *secs_layer;
+TextLayer *ampm_layer;
+TextLayer *year_layer;
+InverterLayer *inverter_layer;
+Layer *line_layer;
+GFont *font_date;
+GFont *font_time;
 
 
 char *upcase(char *str)
@@ -71,17 +53,15 @@ void line_layer_update_callback(Layer *l, GContext *ctx)
     (void)l;
 
     graphics_context_set_stroke_color(ctx, FG_COLOR);
-    graphics_draw_line(ctx, GPoint(0, 35), GPoint(144, 35));
-    graphics_draw_line(ctx, GPoint(0, 36), GPoint(144, 36));
-    graphics_draw_line(ctx, GPoint(0, 108), GPoint(144, 108));
-    graphics_draw_line(ctx, GPoint(0, 109), GPoint(144, 109));
+    graphics_draw_line(ctx, GPoint(0, 22), GPoint(144, 22));
+    graphics_draw_line(ctx, GPoint(0, 23), GPoint(144, 23));
+    graphics_draw_line(ctx, GPoint(0, 92), GPoint(144, 92));
+    graphics_draw_line(ctx, GPoint(0, 93), GPoint(144, 93));
 }
 
 
-void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
+void handle_second_tick(struct tm *tick_time, TimeUnits units_changed)
 {
-    (void)ctx;
-
     // Need to be static because they're used by the system later.
     static char year_text[] = "0000";
     static char date_text[] = "Xxxxxxxxx 00";
@@ -90,27 +70,27 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
     static char secs_text[] = "00";
     static char ampm_text[] = "XX";
 
-    if (t->units_changed & DAY_UNIT)
+    if (units_changed & DAY_UNIT)
     {
-        string_format_time(day_text, sizeof(day_text), "%A", t->tick_time);
-        text_layer_set_text(&day_layer, upcase(day_text));
+        strftime(day_text, sizeof(day_text), "%A", tick_time);
+        text_layer_set_text(day_layer, upcase(day_text));
 
-        string_format_time(date_text, sizeof(date_text), "%B %e", t->tick_time);
-        text_layer_set_text(&date_layer, date_text);
+        strftime(date_text, sizeof(date_text), "%B %e", tick_time);
+        text_layer_set_text(date_layer, date_text);
 
-        string_format_time(year_text, sizeof(year_text), "%Y", t->tick_time);
-        text_layer_set_text(&year_layer, year_text);
+        strftime(year_text, sizeof(year_text), "%Y", tick_time);
+        text_layer_set_text(year_layer, year_text);
     }
 
     if (clock_is_24h_style())
     {
         strcpy(ampm_text, "  ");
-        string_format_time(time_text, sizeof(time_text), "%R", t->tick_time);
+        strftime(time_text, sizeof(time_text), "%R", tick_time);
     }
     else
     {
-        string_format_time(ampm_text, sizeof(ampm_text), "%p", t->tick_time);
-        string_format_time(time_text, sizeof(time_text), "%I:%M", t->tick_time);
+        strftime(ampm_text, sizeof(ampm_text), "%p", tick_time);
+        strftime(time_text, sizeof(time_text), "%I:%M", tick_time);
 
         // Kludge to handle lack of non-padded hour format string
         // for twelve hour clock.
@@ -120,101 +100,166 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
         }
     }
 
-    string_format_time(secs_text, sizeof(secs_text), "%S", t->tick_time);
-    text_layer_set_text(&time_layer, time_text);
-    text_layer_set_text(&secs_layer, secs_text);
-    text_layer_set_text(&ampm_layer, ampm_text);
+    strftime(secs_text, sizeof(secs_text), "%S", tick_time);
+    text_layer_set_text(time_layer, time_text);
+    text_layer_set_text(secs_layer, secs_text);
+    text_layer_set_text(ampm_layer, ampm_text);
 }
 
 
-void handle_init(AppContextRef ctx)
+void update_configuration(void)
 {
-    PblTm tm;
-    PebbleTickEvent t;
+    Layer *inv_layer = inverter_layer_get_layer(inverter_layer);
+
+    if (persist_exists(CONFIG_KEY_BACKGROUND))
+    {
+        if (persist_read_bool(CONFIG_KEY_BACKGROUND))
+        {
+            layer_add_child(window_get_root_layer(window), inv_layer);
+        }
+        else
+        {
+            layer_remove_from_parent(inv_layer);
+        }
+    }
+    else
+    {
+        layer_remove_from_parent(inv_layer);
+    }
+}
+
+
+void in_received_handler(DictionaryIterator *received, void *context)
+{
+    Tuple *background_tuple = dict_find(received, CONFIG_KEY_BACKGROUND);
+
+    if (background_tuple)
+    {
+        app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "bg=%s",
+                background_tuple->value->cstring);
+        if (strcmp(background_tuple->value->cstring, "black") == 0)
+        {
+            persist_write_bool(CONFIG_KEY_BACKGROUND, false);
+            window_set_background_color(window, BG_COLOR);
+        }
+        else
+        {
+            persist_write_bool(CONFIG_KEY_BACKGROUND, true);
+            window_set_background_color(window, BG_COLOR);
+        }
+    }
+
+    update_configuration();
+}
+
+
+void in_dropped_handler(AppMessageResult reason, void *ctx)
+{
+    /* stub */
+}
+
+
+void app_init(void)
+{
     ResHandle res_d;
     ResHandle res_t;
+    Layer *window_layer;
+    time_t t = time(NULL);
+    struct tm *tick_time = localtime(&t);
+    TimeUnits units_changed = SECOND_UNIT | MINUTE_UNIT | HOUR_UNIT | DAY_UNIT;
 
-    window_init(&window, "AccuInfo");
-    window_stack_push(&window, true /* Animated */);
-    window_set_background_color(&window, BG_COLOR);
+    app_message_register_inbox_received(in_received_handler);
+    app_message_register_inbox_dropped(in_dropped_handler);
+    app_message_open(64, 64);
 
-    resource_init_current_app(&APP_RESOURCES);
+    window = window_create();
+    window_layer = window_get_root_layer(window);
+    window_set_background_color(window, BG_COLOR);
 
     res_d = resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_20);
     res_t = resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_SUBSET_41);
     font_date = fonts_load_custom_font(res_d);
     font_time = fonts_load_custom_font(res_t);
 
-    text_layer_init(&day_layer, GRect(0, 2, 144, 33));
-    text_layer_set_font(&day_layer, font_date);
-    text_layer_set_text_color(&day_layer, FG_COLOR);
-    text_layer_set_background_color(&day_layer, GColorClear);
-    text_layer_set_text_alignment(&day_layer, GTextAlignmentCenter);
-    layer_add_child(&window.layer, &day_layer.layer);
+    day_layer = text_layer_create(GRect(0, 2, 144, 33));
+    text_layer_set_font(day_layer, font_date);
+    text_layer_set_text_color(day_layer, FG_COLOR);
+    text_layer_set_background_color(day_layer, GColorClear);
+    text_layer_set_text_alignment(day_layer, GTextAlignmentCenter);
+    layer_add_child(window_layer, text_layer_get_layer(day_layer));
 
-    text_layer_init(&time_layer, GRect(2, 48, 114, 60));
-    text_layer_set_text_color(&time_layer, FG_COLOR);
-    text_layer_set_background_color(&time_layer, GColorClear);
-    text_layer_set_font(&time_layer, font_time);
-    layer_add_child(&window.layer, &time_layer.layer);
+    time_layer = text_layer_create(GRect(2, 48, 114, 60));
+    text_layer_set_text_color(time_layer, FG_COLOR);
+    text_layer_set_background_color(time_layer, GColorClear);
+    text_layer_set_font(time_layer, font_time);
+    layer_add_child(window_layer, text_layer_get_layer(time_layer));
 
-    text_layer_init(&secs_layer, GRect(116, 46, 144-116, 28));
-    text_layer_set_font(&secs_layer, font_date);
-    text_layer_set_text_color(&secs_layer, FG_COLOR);
-    text_layer_set_background_color(&secs_layer, GColorClear);
-    layer_add_child(&window.layer, &secs_layer.layer);
+    secs_layer = text_layer_create(GRect(116, 46, 144-116, 28));
+    text_layer_set_font(secs_layer, font_date);
+    text_layer_set_text_color(secs_layer, FG_COLOR);
+    text_layer_set_background_color(secs_layer, GColorClear);
+    layer_add_child(window_layer, text_layer_get_layer(secs_layer));
 
-    text_layer_init(&ampm_layer, GRect(116, 74, 144-116, 28));
-    text_layer_set_font(&ampm_layer, font_date);
-    text_layer_set_text_color(&ampm_layer, FG_COLOR);
-    text_layer_set_background_color(&ampm_layer, GColorClear);
-    layer_add_child(&window.layer, &ampm_layer.layer);
+    ampm_layer = text_layer_create(GRect(116, 74, 144-116, 28));
+    text_layer_set_font(ampm_layer, font_date);
+    text_layer_set_text_color(ampm_layer, FG_COLOR);
+    text_layer_set_background_color(ampm_layer, GColorClear);
+    layer_add_child(window_layer, text_layer_get_layer(ampm_layer));
 
-    text_layer_init(&date_layer, GRect(1, 118, 144-1, 168-118));
-    text_layer_set_font(&date_layer, font_date);
-    text_layer_set_text_color(&date_layer, FG_COLOR);
-    text_layer_set_background_color(&date_layer, GColorClear);
-    text_layer_set_text_alignment(&date_layer, GTextAlignmentCenter);
-    layer_add_child(&window.layer, &date_layer.layer);
+    date_layer = text_layer_create(GRect(1, 117, 144-1, 168-117));
+    text_layer_set_font(date_layer, font_date);
+    text_layer_set_text_color(date_layer, FG_COLOR);
+    text_layer_set_background_color(date_layer, GColorClear);
+    text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
+    layer_add_child(window_layer, text_layer_get_layer(date_layer));
 
-    text_layer_init(&year_layer, GRect(0, 142, 144, 168-142));
-    text_layer_set_text_color(&year_layer, FG_COLOR);
-    text_layer_set_background_color(&year_layer, GColorClear);
-    text_layer_set_font(&year_layer, font_date);
-    text_layer_set_text_alignment(&year_layer, GTextAlignmentCenter);
-    layer_add_child(&window.layer, &year_layer.layer);
+    year_layer = text_layer_create(GRect(0, 141, 144, 168-141));
+    text_layer_set_text_color(year_layer, FG_COLOR);
+    text_layer_set_background_color(year_layer, GColorClear);
+    text_layer_set_font(year_layer, font_date);
+    text_layer_set_text_alignment(year_layer, GTextAlignmentCenter);
+    layer_add_child(window_layer, text_layer_get_layer(year_layer));
 
-    layer_init(&line_layer, window.layer.frame);
-    line_layer.update_proc = &line_layer_update_callback;
-    layer_add_child(&window.layer, &line_layer);
+    line_layer = layer_create(layer_get_frame(window_layer));
+    layer_set_update_proc(line_layer, line_layer_update_callback);
+    layer_add_child(window_layer, line_layer);
 
-    get_time(&tm);
-    t.tick_time = &tm;
-    t.units_changed = SECOND_UNIT | MINUTE_UNIT | HOUR_UNIT | DAY_UNIT;
+    inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
+    layer_add_child(window_layer,
+                    inverter_layer_get_layer(inverter_layer));
+    update_configuration();
 
-    handle_second_tick(ctx, &t);
+    handle_second_tick(tick_time, units_changed);
+    window_stack_push(window, true /* Animated */);
+    tick_timer_service_subscribe(SECOND_UNIT, handle_second_tick);
 }
 
 
-void handle_deinit(AppContextRef ctx)
+void app_term(void)
 {
+    tick_timer_service_unsubscribe();
+
+    text_layer_destroy(day_layer);
+    text_layer_destroy(time_layer);
+    text_layer_destroy(secs_layer);
+    text_layer_destroy(ampm_layer);
+    text_layer_destroy(date_layer);
+    text_layer_destroy(year_layer);
+    layer_destroy(line_layer);
+    inverter_layer_destroy(inverter_layer);
+
+    window_destroy(window);
+
     fonts_unload_custom_font(font_date);
     fonts_unload_custom_font(font_time);
 }
 
 
-void pbl_main(void *params)
+int main(void)
 {
-    PebbleAppHandlers handlers =
-    {
-        .init_handler = &handle_init,
-        .deinit_handler = &handle_deinit,
-        .tick_info =
-        {
-            .tick_handler = &handle_second_tick,
-            .tick_units = SECOND_UNIT
-        }
-    };
+    app_init();
+    app_event_loop();
+    app_term();
 
-    app_event_loop(params, &handlers);
+    return 0;
 }

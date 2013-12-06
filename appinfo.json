@@ -1,0 +1,36 @@
+{
+  "uuid": "8598ea3a-138c-4f9d-8917-f384d695d76b",
+  "shortName": "AccuInfo",
+  "longName": "AccuInfo",
+  "companyName": "bobh@haucks.org",
+  "versionCode": 2,
+  "versionLabel": "2.0.0",
+  "capabilities": [ "configurable" ],
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+      "background": 0
+  },
+  "resources": {
+    "media": [
+      {
+        "menuIcon": true,
+        "type": "png",
+        "name": "IMAGE_MENU_ICON",
+        "file": "images/menu_icon_accuinfo.png"
+      },
+      {
+        "type": "font",
+        "name": "FONT_ROBOTO_CONDENSED_20",
+        "file": "fonts/Roboto-Condensed.ttf"
+      },
+      {
+        "characterRegex": "[:0-9]",
+        "type": "font",
+        "name": "FONT_ROBOTO_BOLD_SUBSET_41",
+        "file": "fonts/Roboto-Bold.ttf"
+      }
+    ]
+  }
+}
