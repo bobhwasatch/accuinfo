@@ -109,22 +109,27 @@ void handle_second_tick(struct tm *tick_time, TimeUnits units_changed)
 
 void update_configuration(void)
 {
-    Layer *inv_layer = inverter_layer_get_layer(inverter_layer);
+    static bool old_inv = 0;    /* default to not inverted */
 
     if (persist_exists(CONFIG_KEY_BACKGROUND))
     {
-        if (persist_read_bool(CONFIG_KEY_BACKGROUND))
+        bool inv = persist_read_bool(CONFIG_KEY_BACKGROUND);
+
+        if (inv != old_inv)
         {
-            layer_add_child(window_get_root_layer(window), inv_layer);
+            Layer *inv_layer = inverter_layer_get_layer(inverter_layer);
+
+            if (inv)
+            {
+                layer_add_child(window_get_root_layer(window), inv_layer);
+            }
+            else
+            {
+                layer_remove_from_parent(inv_layer);
+            }
+
+            old_inv = inv;
         }
-        else
-        {
-            layer_remove_from_parent(inv_layer);
-        }
-    }
-    else
-    {
-        layer_remove_from_parent(inv_layer);
     }
 }
 
@@ -135,17 +140,19 @@ void in_received_handler(DictionaryIterator *received, void *context)
 
     if (background_tuple)
     {
-        app_log(APP_LOG_LEVEL_DEBUG, __FILE__, __LINE__, "bg=%s",
+        app_log(APP_LOG_LEVEL_DEBUG,
+                __FILE__,
+                __LINE__,
+                "bg=%s",
                 background_tuple->value->cstring);
+
         if (strcmp(background_tuple->value->cstring, "black") == 0)
         {
             persist_write_bool(CONFIG_KEY_BACKGROUND, false);
-            window_set_background_color(window, BG_COLOR);
         }
         else
         {
             persist_write_bool(CONFIG_KEY_BACKGROUND, true);
-            window_set_background_color(window, BG_COLOR);
         }
     }
 
@@ -155,7 +162,11 @@ void in_received_handler(DictionaryIterator *received, void *context)
 
 void in_dropped_handler(AppMessageResult reason, void *ctx)
 {
-    /* stub */
+    app_log(APP_LOG_LEVEL_WARNING,
+            __FILE__,
+            __LINE__,
+            "Message dropped, reason code %d",
+            reason);
 }
 
 
@@ -225,8 +236,6 @@ void app_init(void)
     layer_add_child(window_layer, line_layer);
 
     inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
-    layer_add_child(window_layer,
-                    inverter_layer_get_layer(inverter_layer));
     update_configuration();
 
     handle_second_tick(tick_time, units_changed);
@@ -238,6 +247,7 @@ void app_init(void)
 void app_term(void)
 {
     tick_timer_service_unsubscribe();
+    app_message_deregister_callbacks();
 
     text_layer_destroy(day_layer);
     text_layer_destroy(time_layer);
