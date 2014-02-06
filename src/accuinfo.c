@@ -109,28 +109,11 @@ void handle_second_tick(struct tm *tick_time, TimeUnits units_changed)
 
 void update_configuration(void)
 {
-    static bool old_inv = 0;    /* default to not inverted */
-
+    bool inv = 0;    /* default to not inverted */
     if (persist_exists(CONFIG_KEY_BACKGROUND))
-    {
-        bool inv = persist_read_bool(CONFIG_KEY_BACKGROUND);
+        inv = persist_read_bool(CONFIG_KEY_BACKGROUND);
 
-        if (inv != old_inv)
-        {
-            Layer *inv_layer = inverter_layer_get_layer(inverter_layer);
-
-            if (inv)
-            {
-                layer_add_child(window_get_root_layer(window), inv_layer);
-            }
-            else
-            {
-                layer_remove_from_parent(inv_layer);
-            }
-
-            old_inv = inv;
-        }
-    }
+	layer_set_hidden(inverter_layer_get_layer(inverter_layer), !inv);
 }
 
 
@@ -199,22 +182,28 @@ void app_init(void)
     text_layer_set_text_alignment(day_layer, GTextAlignmentCenter);
     layer_add_child(window_layer, text_layer_get_layer(day_layer));
 
-    time_layer = text_layer_create(GRect(2, 48, 114, 60));
+    time_layer = text_layer_create(GRect(2, 48, 112, 60));
     text_layer_set_text_color(time_layer, FG_COLOR);
     text_layer_set_background_color(time_layer, GColorClear);
     text_layer_set_font(time_layer, font_time);
+	text_layer_set_text_alignment(time_layer, GTextAlignmentRight);
     layer_add_child(window_layer, text_layer_get_layer(time_layer));
 
-    secs_layer = text_layer_create(GRect(116, 46, 144-116, 28));
-    text_layer_set_font(secs_layer, font_date);
+    uint8_t move = 0;
+    if (clock_is_24h_style())
+		move=15;
+	secs_layer = text_layer_create(GRect(116, 46+move, 144-116, 28));
+	text_layer_set_font(secs_layer, font_date);
     text_layer_set_text_color(secs_layer, FG_COLOR);
     text_layer_set_background_color(secs_layer, GColorClear);
+    text_layer_set_text_alignment(secs_layer, GTextAlignmentCenter);
     layer_add_child(window_layer, text_layer_get_layer(secs_layer));
 
     ampm_layer = text_layer_create(GRect(116, 74, 144-116, 28));
     text_layer_set_font(ampm_layer, font_date);
     text_layer_set_text_color(ampm_layer, FG_COLOR);
     text_layer_set_background_color(ampm_layer, GColorClear);
+    text_layer_set_text_alignment(ampm_layer, GTextAlignmentCenter);
     layer_add_child(window_layer, text_layer_get_layer(ampm_layer));
 
     date_layer = text_layer_create(GRect(1, 117, 144-1, 168-117));
@@ -236,7 +225,8 @@ void app_init(void)
     layer_add_child(window_layer, line_layer);
 
     inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
-    update_configuration();
+    layer_add_child(window_layer, inverter_layer_get_layer(inverter_layer));
+	update_configuration();
 
     handle_second_tick(tick_time, units_changed);
     window_stack_push(window, true /* Animated */);
