@@ -1,38 +1,36 @@
 {
-    "versionLabel": "2.1.0",
-    "uuid": "8598ea3a-138c-4f9d-8917-f384d695d76b",
-    "appKeys": {
-        "background": 0
-    },
-    "longName": "AccuInfo",
-    "versionCode": 2,
-    "capabilities": [
-        "configurable"
-    ],
-    "shortName": "AccuInfo",
-    "companyName": "bobh@haucks.org",
-    "watchapp": {
-        "watchface": true
-    },
-    "resources": {
-        "media": [
-            {
-                "characterRegex": "[:0-9]",
-                "type": "font",
-                "name": "FONT_ROBOTO_BOLD_SUBSET_41",
-                "file": "fonts/Roboto-Bold.ttf"
-            },
-            {
-                "type": "font",
-                "name": "FONT_ROBOTO_CONDENSED_20",
-                "file": "fonts/Roboto-Condensed.ttf"
-            },
-            {
-                "menuIcon": true,
-                "type": "png",
-                "name": "IMAGE_MENU_ICON",
-                "file": "images/menu_icon_accuinfo.png"
-            }
-        ]
-    }
+  "uuid": "8598ea3a-138c-4f9d-8917-f384d695d76b",
+  "shortName": "AccuInfo",
+  "longName": "AccuInfo",
+  "companyName": "bobh@haucks.org",
+  "versionCode": 2,
+  "versionLabel": "2.1.0",
+  "capabilities": [ "configurable" ],
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+      "background": 0
+  },
+  "resources": {
+    "media": [
+      {
+        "menuIcon": true,
+        "type": "png",
+        "name": "IMAGE_MENU_ICON",
+        "file": "images/menu_icon_accuinfo.png"
+      },
+      {
+        "type": "font",
+        "name": "FONT_ROBOTO_CONDENSED_20",
+        "file": "fonts/Roboto-Condensed.ttf"
+      },
+      {
+        "characterRegex": "[:0-9]",
+        "type": "font",
+        "name": "FONT_ROBOTO_BOLD_SUBSET_41",
+        "file": "fonts/Roboto-Bold.ttf"
+      }
+    ]
+  }
 }
