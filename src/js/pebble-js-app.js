@@ -1,4 +1,5 @@
 var initialised = false;
+var uri = 'http://www.haucks.org/pebble-js/accuinfo-2.0.html';
 
 function appMessageAck(e) {
     console.log("options sent to Pebble successfully");
@@ -13,23 +14,21 @@ Pebble.addEventListener("ready", function() {
 });
 
 Pebble.addEventListener("showConfiguration", function() {
-    var options = JSON.parse(window.localStorage.getItem('options'));
+    var options = JSON.parse(localStorage.getItem('options'));
     console.log("read options: " + JSON.stringify(options));
     console.log("showing configuration");
-    if (options == null) {
-        var uri = 'http://www.haucks.org/pebble-js/accuinfo-2.0.html';
-    } else {
-        var uri = 'http://www.haucks.org/pebble-js/accuinfo-2.0.html?' + 'background=' + encodeURIComponent(options['background']);
+    if (options !== null) {
+        uri = uri+ '?' + 'background=' + encodeURIComponent(options.background);
     }
     Pebble.openURL(uri);
 });
 
 Pebble.addEventListener("webviewclosed", function(e) {
     console.log("configuration closed");
-    if (e.response != '') {
+    if (e.response !== '') {
         var options = JSON.parse(decodeURIComponent(e.response));
         console.log("storing options: " + JSON.stringify(options));
-        window.localStorage.setItem('options', JSON.stringify(options));
+        localStorage.setItem('options', JSON.stringify(options));
         Pebble.sendAppMessage(options, appMessageAck, appMessageNack);
     } else {
         console.log("no options received");
