@@ -110,10 +110,13 @@ void handle_second_tick(struct tm *tick_time, TimeUnits units_changed)
 void update_configuration(void)
 {
     bool inv = 0;    /* default to not inverted */
-    if (persist_exists(CONFIG_KEY_BACKGROUND))
-        inv = persist_read_bool(CONFIG_KEY_BACKGROUND);
 
-	layer_set_hidden(inverter_layer_get_layer(inverter_layer), !inv);
+    if (persist_exists(CONFIG_KEY_BACKGROUND))
+    {
+        inv = persist_read_bool(CONFIG_KEY_BACKGROUND);
+    }
+
+    layer_set_hidden(inverter_layer_get_layer(inverter_layer), !inv);
 }
 
 
@@ -161,6 +164,7 @@ void app_init(void)
     time_t t = time(NULL);
     struct tm *tick_time = localtime(&t);
     TimeUnits units_changed = SECOND_UNIT | MINUTE_UNIT | HOUR_UNIT | DAY_UNIT;
+    int move = clock_is_24h_style() ? 15 : 0;
 
     app_message_register_inbox_received(in_received_handler);
     app_message_register_inbox_dropped(in_dropped_handler);
@@ -186,14 +190,11 @@ void app_init(void)
     text_layer_set_text_color(time_layer, FG_COLOR);
     text_layer_set_background_color(time_layer, GColorClear);
     text_layer_set_font(time_layer, font_time);
-	text_layer_set_text_alignment(time_layer, GTextAlignmentRight);
+    text_layer_set_text_alignment(time_layer, GTextAlignmentRight);
     layer_add_child(window_layer, text_layer_get_layer(time_layer));
 
-    uint8_t move = 0;
-    if (clock_is_24h_style())
-		move=15;
-	secs_layer = text_layer_create(GRect(116, 46+move, 144-116, 28));
-	text_layer_set_font(secs_layer, font_date);
+    secs_layer = text_layer_create(GRect(116, 46+move, 144-116, 28));
+    text_layer_set_font(secs_layer, font_date);
     text_layer_set_text_color(secs_layer, FG_COLOR);
     text_layer_set_background_color(secs_layer, GColorClear);
     text_layer_set_text_alignment(secs_layer, GTextAlignmentCenter);
@@ -226,7 +227,7 @@ void app_init(void)
 
     inverter_layer = inverter_layer_create(GRect(0, 0, 144, 168));
     layer_add_child(window_layer, inverter_layer_get_layer(inverter_layer));
-	update_configuration();
+    update_configuration();
 
     handle_second_tick(tick_time, units_changed);
     window_stack_push(window, true /* Animated */);
